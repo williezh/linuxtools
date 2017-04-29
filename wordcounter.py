@@ -9,13 +9,6 @@ from multiprocessing import Pool, cpu_count
 WORKERS = min(cpu_count() * 8, 20)  #要启动的进程数,cpu数量的8倍，不超过20
 CODING = 'gbk'
 
-def filesize(fn):
-    """获取要读取文件的大小"""
-    with open(fn) as f:
-        f.seek(0,os.SEEK_END)
-        size = f.tell()
-    return size
-
 def humansize(size):
     """将文件的大小转成带单位的形式"""
     units = ['B', 'KB', 'M', 'G', 'T']    
@@ -46,7 +39,7 @@ def word_count(fn, p1, p2, f_size):
         while 1:    
             pos = f.tell()          
             line = f.readline().decode(CODING)
-            c.update(Counter(re.sub(r'\s+','',line)))      
+            c.update(Counter(re.sub(r'\s+','',line)))   #空格不统计   
             if p1 == 0: #显示进度
                 percent = min(pos * 10000 // p2, 10000)
                 done = '=' * (percent//1000)
@@ -78,8 +71,11 @@ def main():
         print('Usage: python word count text!')
         exit(1)
     start = time.time()
+    dir_of_bigfile = 'var'
+    if not os.path.exists(dir_of_bigfile):
+        os.mkdir(dir_of_bigfile)
     from_file, to_file = sys.argv[1:3]
-    f_size = filesize(from_file)
+    f_size = os.path.getsize(from_file)
     pool = Pool(WORKERS)
     res_list = []
     for i in range(WORKERS):
