@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function, division, unicode_literals
 import sys, re, time, os
+import operator
 from collections import Counter
 from functools import reduce
 from multiprocessing import Pool, cpu_count
@@ -100,7 +101,7 @@ def countwords(from_file, to_file, workers = WORKERS):
             res_list.append(res)
         pool.close()
         pool.join()
-        c = reduce(lambda x, y: x+y, [res.get() for res in res_list])
+        c = reduce(operator.add, [res.get() for res in res_list])
     write_result(c, to_file)
     cost = '{:.1f}'.format(time.time()-start)
     size = humansize(f_size)
@@ -141,7 +142,7 @@ def main():
         L.append(pre.format(*title))
         print('-'*30)
     t =  'cpu_count = {}, now = {}'.format(cpu_count(), datetime.now())
-    result = '\n'.join([sys.version, t] + L)
+    result = '\n'.join([sys.version, t] + L +['-'*50, ''])
     print(result) 
     with open('test_result_multiprocesses.txt', 'ab') as f:
         f.write(result)  
