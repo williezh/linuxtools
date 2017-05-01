@@ -142,10 +142,10 @@ def main():
         L.append(pre.format(*title))
         print('-'*30)
     t =  'cpu_count = {}, now = {}'.format(cpu_count(), datetime.now())
-    result = '\n'.join([sys.version, t] + L +['-'*50, ''])
+    result = '\n'.join([sys.version, t] + L +['-'*90, ''])
     print(result) 
     with open('test_result_multiprocesses.txt', 'ab') as f:
-        f.write(result)  
+        f.write(result.encode('utf-8'))  
     
 if __name__ == '__main__':
     main()
