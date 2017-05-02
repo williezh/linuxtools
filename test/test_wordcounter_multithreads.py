@@ -2,16 +2,19 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function, division, unicode_literals
 import sys, re, time, os
-import operator, chardet
+import operator
 from collections import Counter
 from functools import reduce
-from multiprocessing import Pool, cpu_count
+from multiprocessing import cpu_count
+from threading import Thread
+from Queue import Queue
 from datetime import datetime
 from functools import partial
 from utils import humansize, humantime, processbar
 
-WORKERS = min(cpu_count() * 8, 20)  #要启动的进程数,cpu数量的8倍，不超过20
-CODING = 'utf8'    #'gbk'
+CODING = 'gbk'
+q = Queue()
+
                                 
 def word_count(fn, p1, p2, f_size):  
     """分段读取大文件并统计词频    
@@ -37,7 +40,8 @@ def word_count(fn, p1, p2, f_size):
             c.update(Counter(re.sub(r'\s+','',line)))   #空格不统计   
             if p1 == 0: #显示进度
                 processbar(pos, p2, fn, f_size, start)
-            if pos >= p2:               
+            if pos >= p2: 
+                q.put(c)              
                 return c  
 
 def counter_single(from_file, f_size):
@@ -63,27 +67,29 @@ def write_result(counter, to_file):
     print(s.decode(CODING)[:50], '\n', '...')
     '''        
 
-def countwords(from_file, to_file, workers = WORKERS):
+def countwords(from_file, to_file, workers = 1):
     start = time.time()
     f_size = os.path.getsize(from_file)
     if workers == 1:
         c = counter_single(from_file, f_size)
     else:
-        pool = Pool(workers)
-        res_list = []
+        res_list, threads = [], []
         for i in range(workers):
             p1, p2 = f_size // workers * i,  f_size // workers * (i+1)
             args = [from_file,p1,p2,f_size]
-            res = pool.apply_async(func=word_count, args=args)
-            res_list.append(res)
-        pool.close()
-        pool.join()
-        c = reduce(operator.add, [res.get() for res in res_list])
+            t = Thread(target=word_count, args=args)
+            t.start()
+            threads.append(t)
+        [t.join() for t in threads]
+        while not q.empty():
+            res_list.append(q.get())        
+        c = reduce(operator.add, [res for res in res_list])
     write_result(c, to_file)
     cost = '{:.1f}'.format(time.time()-start)
     size = humansize(f_size)
-    tip = '\nFile size: {}. Workers: {}. Cost time: {} seconds'     
-    print(tip.format(size, workers, cost))
+    tip = '\n{}File size: {}. Workers: {}. Cost time: {} seconds'
+    # 显示光标: '\33[?25h'    
+    print(tip.format('\33[?25h', size, workers, cost))
     return cost + 's'
     
 def main():
@@ -98,12 +104,9 @@ def main():
         os.mkdir(dir_of_bigfile)
     from_file, to_file = '100lines.txt', 'count_result.txt'    
     with open(from_file, 'rb') as f:
-        global CODING
-        CODING = chardet.detect(f.read(1000))['encoding']
-    with open(from_file, 'rb') as f:
         s = f.read()
     files = []
-    for i in [2000]:#, 10000, 20000, 100000, 200000]:
+    for i in [2000, 10000]:#, 20000, 100000, 200000]:  #待测试的文件千行数
         fn = '{}thousandlines.txt'.format(i//10)  
         ffn = os.path.join(dir_of_bigfile, fn)
         files.append(ffn)
@@ -112,17 +115,17 @@ def main():
                 f.write(s*i)
                 
     count_it = partial(countwords, to_file=to_file)
-    ps = [1, 2, 4]#, 8, 16, 32, 64, 128, 256, 512] #待测试的进程数
+    ps = [1, 2, 4, 8, 16, 32]#, 64, 128, 256, 512] #待测试的线程数
     pre = '{:8}' * (len(ps) + 1)
-    title = ['size'] + ['{}ps'.format(i) for i in ps]
+    title = ['size'] + ['{}ts'.format(i) for i in ps]
     L = [pre.format(*title)]
     for i in files:
         size = os.path.getsize(i)
         title = [humansize(size)] + [count_it(i, workers=p) for p in ps]
         L.append(pre.format(*title))
-        print('-'*40)
+        print('-'*30)
     t =  'cpu_count = {}, now = {}'.format(cpu_count(), datetime.now())
-    result = '\n'.join([sys.version, t] + L +['-'*75, ''])
+    result = '\n'.join([sys.version, t] + L +['-'*70, ''])
     print(result) 
     with open('test_result.txt', 'ab') as f:
         f.write(result.encode('utf-8'))  
