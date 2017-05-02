@@ -7,7 +7,6 @@ from collections import Counter
 from functools import reduce
 from multiprocessing import Pool, cpu_count
 from datetime import datetime
-from functools import partial
 from utils import humansize, humantime, processbar
 
 def wrap(wordcounter,  fn, p1, p2, f_size):
