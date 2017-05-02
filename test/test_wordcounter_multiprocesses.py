@@ -20,7 +20,32 @@ def humansize(size):
             break
         size = size // 1024
     return '{} {}'.format(size, unit)
+
+def humantime(seconds):
+    """将秒数转成{}h{}m{}s的形式"""
+    h = m = ''
+    seconds = int(seconds)
+    if seconds >= 3600:
+        h = '{}h '.format(seconds // 3600)
+        seconds = seconds % 3600
+    if seconds >= 60:
+        m = '{}m '.format(seconds // 60)
+        seconds = seconds % 60
+    return '{}{}{:2}s'.format(h, m, seconds)
         
+def processbar(pos, p2, fn, f_size, start):
+    '''打印进度条'''
+    percent = min(pos * 10000 // p2, 10000)
+    done = '=' * (percent//1000)
+    half = '-' if (percent) % 1000 > 5 else ''
+    tobe = ' ' * (10 - (percent)//1000 - len(half))
+    tip = '{}Parsing: {}, '.format('\33[?25l', fn)  #隐藏光标              
+    print('\r{}{:.2f}% [{}{}{}] {:,}/{:,}  remaining:{}'.format(tip, 
+            percent/100, done, half, tobe, 
+            min(pos*int(f_size//p2+0.5), f_size), f_size, 
+            humantime((time.time()-start)*(10000-percent)/(percent+0.01))),
+        end='')
+                                
 def word_count(fn, p1, p2, f_size):  
     """分段读取大文件并统计词频    
     Args:
@@ -38,39 +63,24 @@ def word_count(fn, p1, p2, f_size):
             f.seek(p1-1)
             while b'\n' not in f.read(1):
                 pass
-        
+        start = time.time()
         while 1:    
             pos = f.tell()          
             line = f.readline().decode(CODING)
             c.update(Counter(re.sub(r'\s+','',line)))   #空格不统计   
             if p1 == 0: #显示进度
-                percent = min(pos * 10000 // p2, 10000)
-                done = '=' * (percent//1000)
-                half = '-' if (percent) % 1000 > 5 else ''
-                tobe = ' ' * (10 - (percent)//1000 - len(half))
-                tip = '{}Parsing {}, '.format('\33[?25l', fn)  #隐藏光标              
-                print('\r{}{:.2f}% [{}{}{}] {:,}/{:,}'.format(tip, percent/100, 
-                    done, half, tobe, 
-                    min(pos*(f_size//p2+1), f_size), f_size), 
-                    end='')
+                processbar(pos, p2, fn, f_size, start)
             if pos >= p2:               
                 return c  
 
 def counter_single(from_file, f_size):
+    '''单进程读取文件并统计词频'''
     c = Counter()
+    start = time.time()
     with open(from_file, 'rb') as f:
         for line in f:
             c.update(Counter(re.sub(r'\s+','',line.decode(CODING))))
-            pos = f.tell() 
-            tip = '{}Parsing {}, '.format('\33[?25l', from_file)  #隐藏光标 
-            percent = min(pos * 10000 // f_size, 10000)
-            done = '=' * (percent//1000)
-            half = '-' if (percent) % 1000 > 5 else ''
-            tobe = ' ' * (10 - (percent)//1000 - len(half))
-            print('\r{}{:.2f}% [{}{}{}] {:,}/{:,}'.format(tip, percent/100, 
-                    done, half, tobe, 
-                    pos, f_size), 
-                    end='')
+            processbar(f.tell(), f_size, from_file, f_size, start)
     return c            
        
 def write_result(counter, to_file):   
@@ -105,8 +115,9 @@ def countwords(from_file, to_file, workers = WORKERS):
     write_result(c, to_file)
     cost = '{:.1f}'.format(time.time()-start)
     size = humansize(f_size)
-    print('\33[?25h')    #显示光标    
-    print('File size: {}. Workers: {}. Cost time: {} seconds'.format(size, workers, cost))
+    tip = '\n{}File size: {}. Workers: {}. Cost time: {} seconds'
+    # 显示光标: '\33[?25h'    
+    print(tip.format('\33[?25h', size, workers, cost))
     return cost + 's'
     
 def main():
@@ -123,7 +134,7 @@ def main():
     with open(from_file, 'rb') as f:
         s = f.read()
     files = []
-    for i in [2000, 10000, 20000, 100000, 200000]:
+    for i in [2000]:#, 10000, 20000, 100000, 200000]:
         fn = '{}thousandlines.txt'.format(i//10)  
         ffn = os.path.join(dir_of_bigfile, fn)
         files.append(ffn)
@@ -132,7 +143,7 @@ def main():
                 f.write(s*i)
                 
     count_it = partial(countwords, to_file=to_file)
-    ps = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512] #待测试的进程数
+    ps = [1, 2, 4]#, 8, 16, 32, 64, 128, 256, 512] #待测试的进程数
     pre = '{:8}' * (len(ps) + 1)
     title = ['size'] + ['{}ps'.format(i) for i in ps]
     L = [pre.format(*title)]
