@@ -37,10 +37,10 @@ def word_count(fn, p1, p2, f_size):
             while b'\n' not in f.read(1):
                 pass
         start = time.time()
-        while 1:    
-            pos = f.tell()          
+        while 1:                        
             line = f.readline().decode(CODING)
             c.update(Counter(re.sub(r'\s+','',line)))   #空格不统计   
+            pos = f.tell()  
             if p1 == 0: #显示进度
                 processbar(pos, p2, fn, f_size, start)
             if pos >= p2: 
