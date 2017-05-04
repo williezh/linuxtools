@@ -4,7 +4,16 @@ import os
 import time
 
 def humansize(size):
-    """将文件的大小转成带单位的形式"""
+    """将文件的大小转成带单位的形式
+    >>> humansize(1024) == '1 KB'
+    True
+    >>> humansize(1000) == '1000 B'
+    True
+    >>> humansize(1024*1024) == '1 M'
+    True
+    >>> humansize(1024*1024*1024*2) == '2 G'
+    True
+    """
     units = ['B', 'KB', 'M', 'G', 'T']    
     for unit in units:
         if size < 1024:
@@ -13,7 +22,14 @@ def humansize(size):
     return '{} {}'.format(size, unit)
 
 def humantime(seconds):
-    """将秒数转成00:00:00的形式"""
+    """将秒数转成00:00:00的形式
+    >>> humantime(3600) == '01:00:00'
+    True
+    >>> humantime(360) == '06:00'
+    True
+    >>> humantime(6) == '00:06'
+    True
+    """
     h = m = ''
     seconds = int(seconds)
     if seconds >= 3600:
@@ -25,7 +41,10 @@ def humantime(seconds):
     return '{}{}{:02}'.format(h, m, seconds)
         
 def processbar(pos, p2, fn, f_size, start):
-    '''打印进度条'''
+    '''打印进度条
+    just like:
+    a.txt, 50.00% [=====     ] 1/2 [00:01<00:01]
+    '''
     percent = min(pos * 10000 // p2, 10000)
     done = '=' * (percent//1000)
     half = '-' if percent // 100 % 10 > 5 else ''
@@ -40,3 +59,7 @@ def processbar(pos, p2, fn, f_size, start):
         end='')
     if percent == 10000:
         print('\33[?25h', end='')     # 显示光标  
+
+if __name__ == '__main__':
+    import doctest
+    doctest.testmod()

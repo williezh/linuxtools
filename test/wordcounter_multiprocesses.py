@@ -7,23 +7,22 @@ from collections import Counter
 from functools import reduce
 from multiprocessing import Pool, cpu_count
 from datetime import datetime
+
+parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  
+sys.path.insert(0,parentdir) 
 from utils import humansize, humantime, processbar
 
-def wrap(wcounter,  fn, p1, p2, f_size):
-    return wcounter.count_multi(fn, p1, p2, f_size)
+def wrap(wordcounter,  fn, p1, p2, f_size):
+    return wordcounter.count_multi(fn, p1, p2, f_size)
     
 class WordCounter(object):
-    def __init__(self, from_file, to_file=None, workers=None, coding=None,
-                    max_direct_read_size=10000000):
+    def __init__(self, from_file, to_file=None, workers=None, coding=None):
         if not os.path.isfile(from_file):
-            raise Exception('No such file: 文件不存在')
+            raise Exception('文件不存在')
         self.f1 = from_file
         self.filesize = os.path.getsize(from_file)
         self.f2 = to_file
-        if self.filesize < max_direct_read_size:
-            self.workers = 0
-        else:
-            self.workers = cpu_count() * 64 if workers is None else workers
+        self.workers = workers if workers is not None else cpu_count() * 64
         if coding is None:
             with open(from_file, 'rb') as f:    
                 coding = chardet.detect(f.read(1000))['encoding']            
@@ -33,7 +32,7 @@ class WordCounter(object):
     def run(self):
         start = time.time()
         if self.workers == 0:
-            self.count_direct(self.f1)
+            self.count_direct(self.f1)        
         elif self.workers == 1:
             self.count_single(self.f1, self.filesize)
         else:
@@ -58,7 +57,22 @@ class WordCounter(object):
         tip = '\nFile size: {}. Workers: {}. Cost time: {} seconds'     
         print(tip.format(size, self.workers, cost))
         self.cost = cost + 's'
-                
+
+    def count_direct(self, from_file):
+        '''直接把文件内容全部读进内存并统计词频'''
+        start = time.time()
+        with open(from_file, 'rb') as f:
+            line = f.read()
+        self._c.update(self.parse(line))  
+        
+    def count_single(self, from_file, f_size):
+        '''单进程读取文件并统计词频'''
+        start = time.time()
+        with open(from_file, 'rb') as f:
+            for line in f:
+                self._c.update(self.parse(line))
+                processbar(f.tell(), f_size, from_file, f_size, start)   
+                                
     def count_single(self, from_file, f_size):
         '''单进程读取文件并统计词频'''
         start = time.time()
@@ -67,13 +81,6 @@ class WordCounter(object):
                 self._c.update(self.parse(line))
                 processbar(f.tell(), f_size, from_file, f_size, start)   
 
-    def count_direct(self, from_file):
-        '''直接把文件内容全部读进内存并统计词频'''
-        start = time.time()
-        with open(from_file, 'rb') as f:
-            line = f.read()
-        self._c.update(self.parse(line))  
-                
     def count_multi(self, fn, p1, p2, f_size):  
         c = Counter()
         with open(fn, 'rb') as f:    
@@ -82,10 +89,10 @@ class WordCounter(object):
                 while b'\n' not in f.read(1):
                     pass
             start = time.time()
-            while 1:                           
-                line = f.readline()
-                c.update(self.parse(line))   
-                pos = f.tell()  
+            while 1:                        
+                line = f.readline()                  
+                c.update(self.parse(line)) 
+                pos = f.tell()   
                 if p1 == 0: #显示进度
                     processbar(pos, p2, fn, f_size, start)
                 if pos >= p2:               
@@ -104,23 +111,47 @@ class WordCounter(object):
     @property
     def result(self):
         ss = ['{}: {}'.format(i, j) for i, j in self._c.most_common()]
-        return '\n'.join(ss)
-        
+        return ('\n'.join(ss))#.decode(self.coding)
+                                         
 def main():
-    if len(sys.argv) != 3:
-        print('Usage: python word count text!')
-        exit(1)
-    start = time.time()
-    dir_of_bigfile = 'var'
+    if len(sys.argv) > 2:
+        from_file, to_file = sys.argv[1:3]
+    # 在上一级目录的var文件夹中，生成测试用大文件
+    if os.path.dirname(__file__) in ['test']:
+        dir_of_bigfile = os.path.join('..', 'var')    
+    else:
+        dir_of_bigfile = 'var' 
     if not os.path.exists(dir_of_bigfile):
         os.mkdir(dir_of_bigfile)
-    from_file, to_file = sys.argv[1:3]
-    f_size = os.path.getsize(from_file)
-    w = WordCounter(from_file, to_file)
-    w.run()
-    cost = time.time()-start
-    size = humansize(f_size) 
-    print('File size: {}. Cost time: {:.1f} seconds'.format(size, cost))
+    from_file, to_file = '100lines.txt', 'count_result.txt'    
+
+    with open(from_file, 'rb') as f:
+        s = f.read()
+    files = []
+    for i in [2000]:#, 10000, 20000, 100000, 200000]:
+        fn = '{}thousandlines.txt'.format(i//10)  
+        ffn = os.path.join(dir_of_bigfile, fn)
+        files.append(ffn)
+        if not os.path.exists(ffn):
+            with open(ffn, 'wb') as f:
+                f.write(s*i)
+                
+    ps = [1, 2]#, 4, 8, 16, 32, 64, 128, 256, 512] #待测试的进程数
+    pre = '{:8}' * (len(ps) + 1)
+    title = ['size'] + ['{}ps'.format(i) for i in ps]
+    L = [pre.format(*title)]
+    for i in files:
+        size = os.path.getsize(i)
+        ws = [WordCounter(i, to_file, p) for p in ps]
+        [w.run() for w in ws]
+        title = [humansize(size)] + [w.cost for w in ws]
+        L.append(pre.format(*title))
+        print('-'*40)
+    t =  'cpu_count = {}, now = {}'.format(cpu_count(), datetime.now())
+    result = '\n'.join([sys.version, t] + L +['-'*75, ''])
+    print(result) 
+    with open('test_result.txt', 'ab') as f:
+        f.write(result.encode('utf-8'))  
     
 if __name__ == '__main__':
     main()

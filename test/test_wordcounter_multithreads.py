@@ -10,6 +10,9 @@ from threading import Thread
 from Queue import Queue
 from datetime import datetime
 from functools import partial
+
+parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  
+sys.path.insert(0,parentdir) 
 from utils import humansize, humantime, processbar
 
 CODING = 'gbk'
