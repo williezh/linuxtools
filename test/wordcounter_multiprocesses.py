@@ -106,7 +106,7 @@ class WordCounter(object):
 
     @property
     def counter(self):        
-        return ('\n'.join(ss)).encode(self.coding)
+        return self._c
                     
     @property
     def result(self):

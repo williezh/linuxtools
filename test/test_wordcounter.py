@@ -25,7 +25,7 @@ class WordCounterMultiprocessesTest(TestCase):
         ws = [WordCounter(f1, f2, i,None,1)  for i in [0, 1, None]]          
         for w in ws:  
             w.run()    
-            self.assertEqual(c, w._c)
+            self.assertEqual(c, w.counter)
             self.assertEqual(result, w.result)
 
 if __name__ == '__main__':
