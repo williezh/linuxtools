@@ -111,9 +111,6 @@ def main():
         print('Usage: python wordcounter.py from_file to_file')
         exit(1)
     start = time.time()
-    dir_of_bigfile = 'var'
-    if not os.path.exists(dir_of_bigfile):
-        os.mkdir(dir_of_bigfile)
     from_file, to_file = sys.argv[1:3]
     f_size = os.path.getsize(from_file)
     w = WordCounter(from_file, to_file)
