@@ -108,7 +108,7 @@ class WordCounter(object):
         
 def main():
     if len(sys.argv) != 3:
-        print('Usage: python word count text!')
+        print('Usage: python wordcounter.py from_file to_file')
         exit(1)
     start = time.time()
     dir_of_bigfile = 'var'
