@@ -20,10 +20,13 @@ class WordCounter(object):
         self.f1 = from_file
         self.filesize = os.path.getsize(from_file)
         self.f2 = to_file
-        if self.filesize < max_direct_read_size:
-            self.workers = 0
+        if workers is None:
+            if self.filesize < int(max_direct_read_size):
+                self.workers = 0
+            else:
+                self.workers = cpu_count() * 64 
         else:
-            self.workers = cpu_count() * 64 if workers is None else workers
+            self.workers = int(workers)
         if coding is None:
             try:
                 import chardet
@@ -113,11 +116,17 @@ class WordCounter(object):
         return '\n'.join(ss)
         
 def main():
-    if len(sys.argv) != 3:
+    if len(sys.argv) < 2:
         print('Usage: python wordcounter.py from_file to_file')
         exit(1)
     from_file, to_file = sys.argv[1:3]
-    w = WordCounter(from_file, to_file)
+    args = {'coding' : None, 'workers': None, 'max_direct_read_size':10000000}
+    for i in sys.argv:
+        for k in args:
+            if re.search(r'{}=(.+)'.format(k), i):
+                args[k] = re.findall(r'{}=(.+)'.format(k), i)[0]
+
+    w = WordCounter(from_file, to_file, **args)
     w.run()
     
 if __name__ == '__main__':
