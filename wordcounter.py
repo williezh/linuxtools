@@ -110,14 +110,9 @@ def main():
     if len(sys.argv) != 3:
         print('Usage: python wordcounter.py from_file to_file')
         exit(1)
-    start = time.time()
     from_file, to_file = sys.argv[1:3]
-    f_size = os.path.getsize(from_file)
     w = WordCounter(from_file, to_file)
     w.run()
-    cost = time.time()-start
-    size = humansize(f_size) 
-    print('File size: {}. Cost time: {:.1f} seconds'.format(size, cost))
     
 if __name__ == '__main__':
     main()

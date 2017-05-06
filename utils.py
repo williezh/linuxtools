@@ -52,7 +52,7 @@ def processbar(pos, p2, fn, f_size, start):
     tip = '{}{}, '.format('\33[?25l', os.path.basename(fn))  #隐藏光标          
     past = time.time()-start
     remain = past/(percent+0.01)*(10000-percent)      
-    print('\r{}{:.2f}% [{}{}{}] {:,}/{:,} [{}<{}]'.format(tip, 
+    print('\r{}{:.1f}% [{}{}{}] {:,}/{:,} [{}<{}]'.format(tip, 
             percent/100, done, half, tobe, 
             min(pos*int(f_size//p2+0.5), f_size), f_size, 
             humantime(past), humantime(remain)),

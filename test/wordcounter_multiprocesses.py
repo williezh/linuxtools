@@ -128,7 +128,7 @@ def main():
     with open(from_file, 'rb') as f:
         s = f.read()
     files = []
-    for i in [2000]:#, 10000, 20000, 100000, 200000]:
+    for i in [2000, 10000, 20000, 100000, 200000]:
         fn = '{}thousandlines.txt'.format(i//10)  
         ffn = os.path.join(dir_of_bigfile, fn)
         files.append(ffn)
@@ -136,7 +136,7 @@ def main():
             with open(ffn, 'wb') as f:
                 f.write(s*i)
                 
-    ps = [1, 2]#, 4, 8, 16, 32, 64, 128, 256, 512] #待测试的进程数
+    ps = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512] #待测试的进程数
     pre = '{:8}' * (len(ps) + 1)
     title = ['size'] + ['{}ps'.format(i) for i in ps]
     L = [pre.format(*title)]
