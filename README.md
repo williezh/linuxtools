@@ -8,5 +8,7 @@ some minitools create in linux os that are program with python
 采用chardet自动判断文件编码
 
 How to use:
+
 `pip install chardet`
+
 `python wordcounter file1 file2` 其中file1为要分析的文件名，file2是分析结果要写入的文件名。
