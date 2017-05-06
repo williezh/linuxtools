@@ -15,6 +15,20 @@ def wrap(wcounter,  fn, p1, p2, f_size):
 class WordCounter(object):
     def __init__(self, from_file, to_file=None, workers=None, coding=None,
                     max_direct_read_size=10000000):
+        '''根据设定的进程数，把文件from_file分割成大小基本相同，数量等同与进程数的文件段，
+        来读取并统计词频，然后把结果写入to_file中，当其为None时直接打印在终端或命令行上。
+        Args:
+        @from_file 要读取的文件
+        @to_file 结果要写入的文件
+        @workers 进程数，为0时直接把文件一次性读入内存；为1时按for line in open(xxx)
+                读取；>=2时为多进程分段读取；默认为根据文件大小选择0或cpu数量的64倍
+        @coding 文件的编码方式，默认为采用chardet模块读取前1万个字符才自动判断
+        @max_direct_read_size 直接读取的最大值，默认为10000000（约10M）
+        
+        How to use:
+        w = WordCounter('a.txt', 'b.txt')
+        w.run()        
+        '''
         if not os.path.isfile(from_file):
             raise Exception('No such file: 文件不存在')
         self.f1 = from_file
@@ -35,7 +49,7 @@ class WordCounter(object):
                 print('-'*70)
                 import chardet
             with open(from_file, 'rb') as f:    
-                coding = chardet.detect(f.read(1000))['encoding']            
+                coding = chardet.detect(f.read(10000))['encoding']            
         self.coding = coding
         self._c = Counter()
         
@@ -103,15 +117,15 @@ class WordCounter(object):
     def parse(self, line):  #解析读取的文件流
         return Counter(re.sub(r'\s+','',line.decode(self.coding)))
         
-    def flush(self):
+    def flush(self):  #清空统计结果
         self._c = Counter()
 
     @property
-    def counter(self):        
+    def counter(self):  #返回统计结果的Counter类       
         return self._c
                     
     @property
-    def result(self):
+    def result(self):  #返回统计结果的字符串型式，等同于要写入结果文件的内容
         ss = ['{}: {}'.format(i, j) for i, j in self._c.most_common()]
         return '\n'.join(ss)
         
