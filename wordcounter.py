@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function, division, unicode_literals
 import sys, re, time, os
-import operator, chardet
+import operator
 from collections import Counter
 from functools import reduce
 from multiprocessing import Pool, cpu_count
@@ -25,6 +25,12 @@ class WordCounter(object):
         else:
             self.workers = cpu_count() * 64 if workers is None else workers
         if coding is None:
+            try:
+                import chardet
+            except ImportError:
+                os.system('pip install chardet')
+                print('-'*70)
+                import chardet
             with open(from_file, 'rb') as f:    
                 coding = chardet.detect(f.read(1000))['encoding']            
         self.coding = coding
