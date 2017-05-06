@@ -11,4 +11,4 @@ How to use:
 
 `pip install chardet`
 
-`python wordcounter file1 file2`  # 其中file1为要分析的文件名，file2是分析结果要写入的文件名。
+`python wordcounter file1 file2 [--coding=utf-8] [--workers=64]`  # 其中file1为要分析的文件名，file2是分析结果要写入的文件名, []里的为可选项，coding为编码，workers为要采用的进程数（默认为cpu数量的64倍）。
